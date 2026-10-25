@@ -1,0 +1,58 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: otvet
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: otvet_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U otvet" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://otvet:ci@localhost:5432/otvet_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check app tests && ruff format --check app tests
+      - name: Types
+        run: mypy app
+      - name: Tests (PostgreSQL, incl. concurrency)
+        run: pytest -q --cov=app --cov-report=term-missing:skip-covered
+      - name: Tests (SQLite)
+        run: TEST_DATABASE_URL= pytest -q
+      - name: Migrations apply, roll back and match the models
+        env:
+          APP_ENV: dev
+          DATABASE_URL: postgresql+psycopg://otvet:ci@localhost:5432/otvet_test
+        run: |
+          python - <<'PY'
+          import sqlalchemy as sa, os
+          e = sa.create_engine(os.environ["DATABASE_URL"])
+          with e.begin() as c:
+              c.execute(sa.text("drop schema public cascade; create schema public"))
+          PY
+          alembic upgrade head && alembic downgrade base && alembic upgrade head && alembic check
+      - name: SAST
+        run: bandit -r app -q -ll
+      - name: Dependency audit
+        run: pip-audit -r requirements.txt
+
+  image:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t otvet:ci .

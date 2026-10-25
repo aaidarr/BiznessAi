@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}ИИ-администратор для бизнеса{% endblock %}
+{% block content %}
+<section class="hero hero-c">
+  <span class="badge-pill">Новое · ИИ-администратор для вашего бизнеса</span>
+  <h1>Бот, который отвечает по вашей базе и не выдумывает</h1>
+  <p class="lead">Вставьте адрес сайта и за 10 минут получите ассистента для сайта, Telegram и VK. Он отвечает фактами из вашей базы, записывает клиентов на свободное время и передаёт менеджеру всё, чего не знает.</p>
+  <p class="hero-actions"><a class="btn-dark btn-lg" href="/register">Попробовать бесплатно</a><a class="btn-light btn-lg" href="/#how">Как это работает</a></p>
+</section>
+
+<section class="showcase" aria-label="Пример диалога">
+  <div class="show-frame">
+    <div class="chat-demo">
+      <div class="chat-head"><span class="brand-mark" aria-hidden="true">O</span><div><b>Администратор</b><span class="muted small-text">отвечает по базе компании</span></div><span class="pill pill-ok">онлайн</span></div>
+      <div class="msg msg-in">Сколько стоит стрижка и есть ли время завтра?</div>
+      <div class="msg msg-out">Стрижка стоит 800 ₽ и занимает 60 минут. Завтра свободно: 11:00, 15:30, 17:00. Какое время выбрать?</div>
+      <div class="msg msg-in">15:30</div>
+      <div class="msg msg-out">Записал вас на завтра в 15:30. Напомню за час до визита.</div>
+    </div>
+    <div class="side-cards">
+      <div class="mini-card"><span class="muted small-text">Новая запись</span><b>Завтра, 15:30</b><span class="small-text">Стрижка · Анна · Telegram</span></div>
+      <div class="mini-card"><span class="muted small-text">Нет ответа в базе</span><b>«Есть ли детская стрижка?»</b><span class="small-text">Добавьте ответ в один клик</span></div>
+      <div class="mini-card"><span class="muted small-text">Закрыто ботом сегодня</span><b class="big">42 из 47</b><span class="small-text">диалогов без менеджера</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sect" id="features">
+  <h2 class="sect-title">Всё, чтобы клиенты не уходили без ответа</h2>
+  <p class="sect-sub">Один сервис вместо администратора, который ночью спит, а в пик занят.</p>
+  <div class="cells">
+    <div class="cell"><h3>Не врёт</h3><p class="muted">Цены, время и телефоны проверяются по базе перед отправкой. Нет ответа в базе, значит честный отказ и заявка менеджеру.</p></div>
+    <div class="cell"><h3>Записывает</h3><p class="muted">Свободные окна считаются по расписанию специалистов с учётом обеда и выходных. Двойная запись исключена.</p></div>
+    <div class="cell"><h3>Запускается сам</h3><p class="muted">База собирается с сайта, проверка работает одной кнопкой. Не нужны разработчики и звонки с продажами.</p></div>
+    <div class="cell"><h3>Учится на пробелах</h3><p class="muted">Вопросы без ответа собираются в список. Добавьте ответ в один клик, и бот знает его навсегда.</p></div>
+  </div>
+</section>
+
+<section class="sect" id="how">
+  <h2 class="sect-title">Запуск за вечер</h2>
+  <p class="sect-sub">Три шага, без участия нашей команды.</p>
+  <ol class="steps">
+    <li><span class="step-n">1</span><h3>Загрузите базу</h3><p class="muted">Адрес сайта, документы или готовый шаблон под вашу нишу.</p></li>
+    <li><span class="step-n">2</span><h3>Проверьте ответы</h3><p class="muted">Автопроверка задаст боту типовые вопросы и покажет, где не хватает данных.</p></li>
+    <li><span class="step-n">3</span><h3>Подключите каналы</h3><p class="muted">Виджет на сайт, Telegram и VK. Записи появятся в календаре.</p></li>
+  </ol>
+</section>
+
+<section class="sect" id="pricing">
+  <h2 class="sect-title">Тариф без сюрпризов</h2>
+  <p class="sect-sub">Начните бесплатно и переходите, когда бот станет вашей опорой.</p>
+  <div class="plans">
+    <div class="plan"><h3>Бесплатно</h3><p class="price">0 ₽ <span class="muted">/ месяц</span></p><ul><li>100 диалогов в месяц</li><li>Виджет, Telegram, VK</li><li>Календарь и записи</li></ul><a class="btn-light btn-block" href="/register">Начать</a></div>
+    <div class="plan plan-main"><h3>Старт</h3><p class="price">2 900 ₽ <span class="muted">/ месяц</span></p><ul><li>1000 диалогов в месяц</li><li>Всё из бесплатного</li><li>Отчёты и выгрузка</li></ul><a class="btn-dark btn-block" href="/register">Выбрать «Старт»</a></div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <h2>Пусть клиенты получают ответ сразу</h2>
+  <p>Попробуйте бесплатно, карта не нужна.</p>
+  <a class="btn-white btn-lg" href="/register">Создать администратора</a>
+</section>
+{% endblock %}

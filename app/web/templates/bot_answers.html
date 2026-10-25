@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Ответы бота{% endblock %}
+{% block content %}
+<h1>Ответы бота</h1>
+<p class="muted">Бот отвечает только по <b>опубликованным</b> ответам. То, что вы написали сами, важнее текста с сайта: если у вас есть ответ на точно такой же вопрос, бот возьмёт его.</p>
+{% if missing %}<div class="flash err">В опубликованных ответах не нашлось: {{ missing | join(', ') }}. Клиенты спрашивают об этом чаще всего. <a href="/app/bot/templates">Заполнить по шаблону</a></div>{% endif %}
+
+{{ tabs([('sec-list','Ответы (' ~ total ~ ')'),('sec-add','Добавить ответ')]) }}
+<div class="split">
+<div class="split-main">
+<div id="sec-list">
+  <form method="get" action="/app/bot/answers" class="card row filters" role="search">
+    <div class="grow"><label for="q">Поиск по ответам</label><input id="q" name="q" type="text" value="{{ q }}" maxlength="100" placeholder="например: парковка"></div>
+    <div><label for="st">Статус</label>
+      <select id="st" name="status">
+        <option value="all" {% if status == 'all' %}selected{% endif %}>Все ({{ counts.all }})</option>
+        <option value="published" {% if status == 'published' %}selected{% endif %}>Опубликованные ({{ counts.published }})</option>
+        <option value="draft" {% if status == 'draft' %}selected{% endif %}>Черновики ({{ counts.draft }})</option>
+      </select></div>
+    <div><label for="dc">Источник</label>
+      <select id="dc" name="doc">
+        <option value="0">Все</option>
+        {% for d in docs.values() %}<option value="{{ d.id }}" {% if doc == d.id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      </select></div>
+    <button type="submit">Найти</button>
+  </form>
+
+
+  <div class="row">
+    <h2 class="grow">Найдено: {{ total }}</h2>
+    {% if counts.draft %}<form method="post" action="/app/bot/answers/publish-all"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ghost small">Опубликовать все черновики</button></form>{% endif %}
+  </div>
+
+  {% for it in items %}
+  <article class="card item">
+    <div class="row">
+      <span class="pill {{ 'ok' if it.published else 'warn' }}">{{ 'опубликован' if it.published else 'черновик' }}</span>
+      <span class="muted grow">
+        {% if it.document_id and it.document_id in docs %}{{ docs[it.document_id].name }}{% elif it.kind in ('faq', 'manual') %}написано вручную{% else %}{{ it.kind }}{% endif %}
+        {% if it.source_url %} · <span class="url">{{ it.source_url }}</span>{% endif %}
+      </span>
+      <button type="button" class="ghost small" data-ask="{{ it.title or it.text[:80] }}">Проверить</button>
+    </div>
+    <h3>{{ it.title or '(без вопроса)' }}</h3>
+    <p class="answer">{{ it.text }}</p>
+    <details>
+      <summary>Изменить</summary>
+      <form method="post" action="/app/bot/answers/{{ it.id }}/update">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label for="ti{{ it.id }}">Вопрос</label>
+        <input id="ti{{ it.id }}" name="title" type="text" maxlength="200" value="{{ it.title }}">
+        <label for="tx{{ it.id }}">Ответ</label>
+        <textarea id="tx{{ it.id }}" name="text" required maxlength="4000">{{ it.text }}</textarea>
+        <p><label class="check"><input type="checkbox" name="publish" value="1" {% if it.published %}checked{% endif %}> опубликован</label></p>
+        <button type="submit" class="small">Сохранить</button>
+      </form>
+      <div class="row mt8">
+        <form method="post" action="/app/bot/answers/{{ it.id }}/delete" data-confirm="Удалить ответ?"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="danger small">Удалить</button></form>
+      </div>
+    </details>
+  </article>
+  {% else %}
+  <div class="card empty"><p>Здесь пока пусто.</p><p class="muted">Самый быстрый старт — <a href="/app/bot/templates">готовый шаблон</a> для вашего бизнеса или <a href="/app/bot/documents">загрузка документов и сайта</a>.</p></div>
+  {% endfor %}
+
+  {% if pages > 1 %}
+  <nav class="row pager" aria-label="Страницы">
+    {% if page > 1 %}<a class="btn ghost small" href="/app/bot/answers?q={{ q | urlencode }}&amp;status={{ status }}&amp;doc={{ doc }}&amp;page={{ page - 1 }}">← Назад</a>{% endif %}
+    <span class="muted">Страница {{ page }} из {{ pages }}</span>
+    {% if page < pages %}<a class="btn ghost small" href="/app/bot/answers?q={{ q | urlencode }}&amp;status={{ status }}&amp;doc={{ doc }}&amp;page={{ page + 1 }}">Вперёд →</a>{% endif %}
+  </nav>
+  {% endif %}
+</div>
+
+<div id="sec-add" class="card">
+  <h3>Добавить свой ответ</h3>
+  <p class="muted">Вопрос и ответ, как вы сами ответили бы клиенту. Такой ответ важнее текста с сайта.</p>
+  <form method="post" action="/app/bot/answers/add">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="t">Вопрос клиента (коротко)</label>
+    <input id="t" name="title" type="text" maxlength="200" placeholder="Например: Есть ли парковка?">
+    <label for="x">Ответ</label>
+    <textarea id="x" name="text" required maxlength="20000" placeholder="Да, бесплатная парковка у входа на 20 мест."></textarea>
+    <p><label class="check"><input type="checkbox" name="publish" value="1" checked> сразу опубликовать</label></p>
+    <button type="submit">Добавить</button>
+  </form>
+</div>
+</div>
+
+<aside class="split-side">
+  <div class="card sticky">
+    <h3>Спросите бота</h3>
+    <p class="muted">Так он ответит клиенту. Под ответом видно, откуда он взят.</p>
+    {% include "_chat.html" %}
+  </div>
+  {% if gaps %}
+  <div class="card">
+    <h3>Чего не хватает</h3>
+    <p class="muted">Клиенты спрашивали, а ответа не было:</p>
+    <ul class="plain">{% for g in gaps %}<li>{{ g.sample }} <span class="pill warn">{{ g.count }}</span></li>{% endfor %}</ul>
+    <a href="/app/gaps">Ответить на эти вопросы →</a>
+  </div>
+  {% endif %}
+</aside>
+</div>
+{% endblock %}

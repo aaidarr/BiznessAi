@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Регистрация{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Регистрация</h1>
+  {% if error %}<div class="flash err" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/register">
+    <label for="name">Название бизнеса</label>
+    <input id="name" name="name" type="text" required maxlength="120" value="{{ form.name if form else '' }}">
+    <label for="site_url">Адрес сайта (необязательно)</label>
+    <input id="site_url" name="site_url" type="text" maxlength="500" placeholder="example.ru" value="{{ form.site_url if form else '' }}">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" autocomplete="username" required maxlength="254" value="{{ form.email if form else '' }}">
+    <label for="password">Пароль (не короче 10 символов)</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" required minlength="10" maxlength="200">
+    <p class="muted">Нажимая кнопку, вы соглашаетесь с условиями сервиса и политикой обработки персональных данных.</p>
+    <p><button type="submit">Создать аккаунт</button></p>
+  </form>
+</div>
+{% endblock %}

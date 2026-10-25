@@ -1,0 +1,8 @@
+<div id="chat" data-csrf="{{ csrf }}">
+  <div id="chat-log" class="chat" aria-live="polite"></div>
+  <form id="chat-form" class="row mt8">
+    <input class="grow" id="chat-input" type="text" maxlength="1000" placeholder="Спросите бота…" aria-label="Сообщение боту" autocomplete="off">
+    <button type="submit">Отправить</button>
+    <button type="button" id="chat-reset" class="ghost">Заново</button>
+  </form>
+</div>

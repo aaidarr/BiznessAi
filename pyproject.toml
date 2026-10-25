@@ -1,0 +1,37 @@
+[project]
+name = "otvet"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations/versions", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = [
+    "E501",   # long lines in templates/strings are fine
+    "S101",   # assert is used in tests
+    "B008",   # FastAPI Depends() in defaults is the framework idiom
+    "SIM105", "SIM108",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "B", "E402", "E702", "E731", "SIM"]
+"migrations/*" = ["S"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::starlette.exceptions.StarletteDeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+exclude = ["tests/", "migrations/", ".venv/"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/cli.py"]

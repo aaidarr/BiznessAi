@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Запись{% endblock %}
+{% block content %}
+{% macro st(s) -%}{{ {'confirmed': 'подтверждена', 'pending': 'ждёт подтверждения', 'cancelled': 'отменена'}.get(s, s) }}{%- endmacro %}
+<p><a href="/app/calendar?view=day&amp;date={{ start.date().isoformat() }}">← Календарь, {{ start.strftime('%d.%m.%Y') }}</a></p>
+<div class="row">
+  <h1 class="grow">{{ service.name if service else 'Запись' }}</h1>
+  <span class="pill {{ 'ok' if b.status == 'confirmed' else ('warn' if b.status == 'pending' else 'err') }}">{{ st(b.status) }}</span>
+</div>
+
+{% set ns = namespace(items=[('sec-visit', 'Запись')]) %}
+{% if b.status != 'cancelled' %}{% set ns.items = ns.items + [('sec-move', 'Перенос')] %}{% endif %}
+{% set ns.items = ns.items + [('sec-note', 'Заметка')] %}
+{% if messages %}{% set ns.items = ns.items + [('sec-chat', 'Переписка')] %}{% endif %}
+{{ tabs(ns.items) }}
+<div class="grid2" id="sec-visit">
+  <div class="card">
+    <h3>Визит</h3>
+    <dl class="facts">
+      <dt>Когда</dt><dd>{{ start.strftime('%d.%m.%Y') }}, {{ start.strftime('%H:%M') }}–{{ end.strftime('%H:%M') }}</dd>
+      <dt>Специалист</dt><dd>{{ resource.name if resource else '—' }}</dd>
+      <dt>Стоимость</dt><dd>{% if service and service.price_rub is not none %}{{ service.price_rub }} ₽{% else %}не указана{% endif %}</dd>
+      <dt>Источник</dt><dd>{{ {'widget': 'Сайт', 'telegram': 'Telegram', 'vk': 'VK', 'owner': 'Добавлена вручную'}.get(b.channel, b.channel) }}</dd>
+      <dt>Создана</dt><dd>{{ created.strftime('%d.%m.%Y %H:%M') }}</dd>
+    </dl>
+    <div class="row">
+      {% if b.status == 'pending' %}<form method="post" action="/app/calendar/booking/{{ b.id }}/confirm"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Подтвердить</button></form>{% endif %}
+      {% if b.status != 'cancelled' %}<form method="post" action="/app/calendar/booking/{{ b.id }}/cancel" data-confirm="Отменить запись? Клиент получит сообщение."><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="danger">Отменить запись</button></form>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Клиент</h3>
+    <dl class="facts">
+      <dt>Имя</dt><dd>{{ b.client_name }}</dd>
+      <dt>Телефон</dt><dd>{% if b.client_phone %}<a href="tel:{{ b.client_phone }}">{{ b.client_phone }}</a>{% else %}не указан{% endif %}</dd>
+    </dl>
+    <h3>Другие записи клиента</h3>
+    {% if history %}
+    <ul class="plain">{% for h, name, when in history %}<li><a href="/app/calendar/booking/{{ h.id }}">{{ when.strftime('%d.%m.%Y %H:%M') }}</a> · {{ name }} · {{ st(h.status) }}</li>{% endfor %}</ul>
+    {% else %}<p class="muted">Это первая запись с таким телефоном.</p>{% endif %}
+  </div>
+</div>
+
+{% if b.status != 'cancelled' %}
+<div class="card" id="sec-move">
+  <h3>Перенести</h3>
+  <form method="post" action="/app/calendar/booking/{{ b.id }}/move" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div><label for="md">Дата</label><input id="md" name="day" type="date" value="{{ start.date().isoformat() }}" required></div>
+    <div><label for="mt">Время</label><input id="mt" name="at" type="time" step="900" value="{{ start.strftime('%H:%M') }}" required></div>
+    <button type="submit">Перенести</button>
+  </form>
+  <p class="muted">Клиенту в Telegram или VK уйдёт сообщение о переносе. Время должно попадать в расписание специалиста.</p>
+</div>
+{% endif %}
+
+<div class="card" id="sec-note">
+  <h3>Заметка</h3>
+  <form method="post" action="/app/calendar/booking/{{ b.id }}/note">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="nt" class="sr">Заметка к записи</label>
+    <textarea id="nt" name="note" maxlength="1000" placeholder="Например: аллергия на лак, просит мастера Анну">{{ b.note }}</textarea>
+    <p><button type="submit" class="small">Сохранить</button></p>
+  </form>
+</div>
+
+{% if messages %}
+<div class="card" id="sec-chat">
+  <h3>Переписка, из которой появилась запись</h3>
+  {% for m in messages %}<p><b>{{ 'Клиент' if m.role == 'client' else 'Бот' }}:</b> {{ m.text }}</p>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

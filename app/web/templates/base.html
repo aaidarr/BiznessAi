@@ -1,0 +1,104 @@
+{% from "_ui.html" import icon %}
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{% block title %}Otvet{% endblock %} — Otvet</title>
+<link rel="stylesheet" href="/static/app.css">
+{% block head %}{% endblock %}
+</head>
+<body class="{{ 'app' if email else 'public' }}">
+<a class="skip-link" href="#main">Перейти к содержимому</a>
+{% if email %}
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar" aria-label="Главное меню">
+    <a class="brand" href="/app"><span class="brand-mark" aria-hidden="true">O</span> Otvet</a>
+    <nav class="nav" aria-label="Разделы кабинета">
+      {% for g in nav_tree %}
+        {% if g.children %}
+        <details class="nav-group" data-nav-key="{{ g.key }}"{% if g.open %} open{% endif %}>
+          <summary class="nav-item{% if g.open %} is-parent-active{% endif %}">
+            {{ icon(g.icon) }}<span class="nav-label">{{ g.title }}</span>{{ icon('chevron', 16) }}
+          </summary>
+          <div class="nav-sub">
+            {% for c in g.children %}
+            <a class="nav-sub-item{% if c.active %} is-active{% endif %}" href="{{ c.href }}"{% if c.active %} aria-current="page"{% endif %}>
+              <span>{{ c.title }}</span>{% if c.badge %}<span class="count">{{ c.badge }}</span>{% endif %}
+            </a>
+            {% endfor %}
+          </div>
+        </details>
+        {% else %}
+        <a class="nav-item{% if g.active %} is-active{% endif %}" href="{{ g.href }}"{% if g.active %} aria-current="page"{% endif %}>
+          {{ icon(g.icon) }}<span class="nav-label">{{ g.title }}</span>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+  </aside>
+  <div class="scrim" data-nav-close></div>
+
+  <div class="main-col">
+    <header class="topbar">
+      <button type="button" class="icon-btn menu-btn" aria-label="Открыть меню" aria-controls="sidebar" aria-expanded="false" data-nav-toggle>{{ icon('menu', 20) }}</button>
+      <nav class="crumbs" aria-label="Вы здесь">
+        <ol>
+          <li>{% if crumbs or crumb_last %}<a href="/app">Главная</a>{% else %}<span aria-current="page">Главная</span>{% endif %}</li>
+          {% for title, href in crumbs %}
+          <li>{% if href and not loop.last %}<a href="{{ href }}">{{ title }}</a>{% else %}<span{% if loop.last and not crumb_last %} aria-current="page"{% endif %}>{{ title }}</span>{% endif %}</li>
+          {% endfor %}
+          {% if crumb_last %}<li><span aria-current="page">{{ crumb_last }}</span></li>{% endif %}
+        </ol>
+      </nav>
+      <div class="grow"></div>
+      <details class="account" data-account>
+        <summary class="avatar" aria-label="Меню аккаунта">{{ initials }}</summary>
+        <div class="menu" role="menu">
+          <p class="menu-who">{{ email }}</p>
+          <a role="menuitem" href="/app/settings">{{ icon('settings', 16) }} Настройки</a>
+          <a role="menuitem" href="/app/billing">{{ icon('file', 16) }} Тариф</a>
+          <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button role="menuitem" type="submit" class="menu-btn-row">{{ icon('logout', 16) }} Выйти</button></form>
+        </div>
+      </details>
+    </header>
+    <main id="main" class="content" tabindex="-1">
+{% else %}
+<header class="public-top"><div class="public-wrap">
+  <nav class="float-nav" aria-label="Главная навигация">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">O</span> Otvet</a>
+    <span class="float-links">
+      <a href="/#how">Как это работает</a>
+      <a href="/#features">Возможности</a>
+      <a href="/#pricing">Тариф</a>
+    </span>
+    <span class="float-cta">
+      <a class="link-quiet" href="/login">Войти</a>
+      <a class="btn-dark" href="/register">Попробовать</a>
+    </span>
+  </nav>
+</div></header>
+<main id="main" class="public-wrap public-main" tabindex="-1">
+{% endif %}
+      {% if flash %}<div class="flash {{ 'err' if flash[0] == 'err' else 'ok' }}" role="status">{{ flash[1] }}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+{% if email %}
+  </div>
+</div>
+{% endif %}
+
+<dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title">Подтвердите действие</h2>
+    <p id="confirm-text" class="muted"></p>
+    <div class="modal-actions">
+      <button type="submit" value="cancel" class="btn btn-secondary">Отмена</button>
+      <button type="submit" value="ok" class="btn btn-danger" id="confirm-ok">Подтвердить</button>
+    </div>
+  </form>
+</dialog>
+<script src="/static/cabinet.js" defer></script>
+</body>
+</html>

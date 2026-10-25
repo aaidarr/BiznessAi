@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon %}
+{% block title %}Главная{% endblock %}
+{% block content %}
+<div class="dash">
+  <div class="dash-head">
+    <div class="dash-title">
+      <h1>{{ d.greeting }}, {{ biz.name }}</h1>
+      <p class="muted">
+        {{ d.today.strftime('%d.%m.%Y') }}
+        <span class="sep" aria-hidden="true">·</span>
+        <span class="status status-{{ d.bot_status.level }}"><span class="status-dot" aria-hidden="true"></span>{{ d.bot_status.text }}</span>
+        <span class="sep" aria-hidden="true">·</span>
+        <a class="plan-chip{% if d.used >= d.limit * 0.8 %} is-hot{% endif %}" href="/app/billing" title="Статус: {{ d.plan_status }}">Тариф «{{ d.plan }}»: {{ d.used }} из {{ d.limit }} диалогов</a>
+      </p>
+    </div>
+    <div class="page-actions">
+      <a class="btn btn-secondary" href="/app/test">Проверить бота</a>
+      <a class="btn btn-primary" href="/app/calendar">{{ icon('plus', 16) }} Новая запись</a>
+    </div>
+  </div>
+
+  {% if biz.blocked %}<div class="flash err" role="alert">Аккаунт заблокирован оператором. Свяжитесь с поддержкой.</div>{% endif %}
+
+  <section class="kpis" aria-label="Ключевые показатели">
+    {% for k in d.kpis %}
+    <a class="kpi" href="{{ k.href }}">
+      <span class="kpi-label">{{ k.label }}</span>
+      <span class="kpi-line"><span class="kpi-value">{{ k.value }}</span>{% if k.hint %}<span class="kpi-hint">{{ k.hint }}</span>{% endif %}</span>
+      {% if k.spark %}<svg class="spark" viewBox="0 0 {{ k.spark.width }} {{ k.spark.height }}" role="img" aria-label="За 14 дней">{% for b in k.spark.bars %}<rect class="{{ 'on' if b.on else 'off' }}" x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}"><title>{{ b.tip }}</title></rect>{% endfor %}</svg>{% endif %}
+    </a>
+    {% endfor %}
+  </section>
+
+  <div class="cols">
+    <div class="col-main">
+      <section class="panel" aria-labelledby="h-attn">
+        <div class="panel-head"><h2 id="h-attn">Требует внимания</h2>{% if d.attention_total %}<span class="count">{{ d.attention_total }}</span>{% endif %}</div>
+        {% if d.attention %}
+        <ul class="list">
+          {% for a in d.attention %}
+          <li class="list-row">
+            <span class="dot dot-{{ a.level }}" aria-hidden="true">{{ icon('alert' if a.level != 'info' else 'info', 14) }}</span>
+            <span class="grow clip" title="{{ a.text }}">{{ a.text }}</span>
+            <a class="btn btn-secondary btn-sm" href="{{ a.href }}">{{ a.cta }}</a>
+          </li>
+          {% endfor %}
+          {% if d.attention_hidden %}<li class="list-more"><a href="{{ d.attention_more_href }}">Ещё {{ d.attention_hidden }} {{ 'пункт' if d.attention_hidden == 1 else 'пункта' if d.attention_hidden < 5 else 'пунктов' }} →</a></li>{% endif %}
+        </ul>
+        {% else %}
+        <p class="empty-line"><span class="dot dot-ok" aria-hidden="true">{{ icon('check', 14) }}</span> Всё в порядке: ничего не ждёт вашего решения.</p>
+        {% endif %}
+      </section>
+
+      <section class="panel" aria-labelledby="h-ev">
+        <div class="panel-head"><h2 id="h-ev">Последние события</h2><a href="/app/conversations">Все диалоги</a></div>
+        {% if d.events %}
+        <ul class="list">
+          {% for e in d.events %}
+          <li class="list-row">
+            <span class="dot" aria-hidden="true">{{ icon({'booking': 'calendar', 'lead': 'phone', 'gap': 'question'}[e.kind], 14) }}</span>
+            <a class="grow list-link clip" href="{{ e.href }}" title="{{ e.text }}">{{ e.text }}</a>
+            {% if e.status %}<span class="pill">{{ e.status }}</span>{% endif %}
+            <span class="muted nowrap small-text">{{ e.when }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-line">Событий пока нет. <a href="/app/channels">Подключить каналы</a></p>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="col-side">
+      <section class="panel" aria-labelledby="h-up">
+        <div class="panel-head"><h2 id="h-up">Ближайшие записи</h2><a href="/app/calendar">Календарь</a></div>
+        {% if d.upcoming %}
+        <ul class="list">
+          {% for b in d.upcoming %}
+          <li class="list-row">
+            <a class="grow list-link clip" href="/app/calendar/booking/{{ b.id }}" title="{{ b.who }} · {{ b.service }}">{{ b.who }} <span class="muted">· {{ b.service }}</span></a>
+            {% if b.status == 'pending' %}<span class="pill pill-warn">ждёт</span>{% endif %}
+            <span class="nowrap small-text">{{ b.when }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-line">Записей пока нет. <a href="/app/calendar">Открыть календарь</a></p>
+        {% endif %}
+      </section>
+
+      <section class="panel" aria-labelledby="h-qa">
+        <div class="panel-head"><h2 id="h-qa">Быстрые действия</h2></div>
+        <div class="quick">
+          <a href="/app/bot/answers">{{ icon('plus', 15) }} Добавить ответ</a>
+          <a href="/app/bot/templates">{{ icon('spark', 15) }} По шаблону</a>
+          <a href="/app/bot/documents">{{ icon('file', 15) }} Документ</a>
+          <a href="/app/reports">{{ icon('chart', 15) }} Отчёты</a>
+        </div>
+      </section>
+
+      <section class="panel chart" aria-labelledby="h-ch">
+        <div class="panel-head"><h2 id="h-ch">Записи и диалоги за 14 дней</h2><a href="/app/reports">Отчёты</a></div>
+        <div class="chart-body">
+          {% if d.chart.geo %}
+          <svg class="chart-svg" viewBox="0 0 {{ d.chart.geo.width }} {{ d.chart.geo.height }}" role="img" aria-label="Диалоги и записи по дням за 14 дней">{% for b in d.chart.geo.bars %}<rect class="bar-{{ b.kind }}{{ '' if b.on else ' off' }}" x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}"><title>{{ b.tip }}</title></rect>{% endfor %}</svg>
+          <div class="chart-axis small-text muted"><span>{{ d.chart.from.strftime('%d.%m') }}</span><span>{{ d.chart.to.strftime('%d.%m') }}</span></div>
+          <p class="chart-legend small-text"><span class="lg lg-a"></span>Диалоги: <b>{{ d.chart.dialogs }}</b> <span class="lg lg-b"></span>Записи: <b>{{ d.chart.bookings }}</b></p>
+          {% else %}
+          <p class="empty-line">За 14 дней диалогов и записей ещё не было. Они появятся здесь, когда клиенты начнут писать боту.</p>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

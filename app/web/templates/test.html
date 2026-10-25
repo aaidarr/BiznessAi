@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Проверка бота{% endblock %}
+{% block content %}
+<h1>Проверка бота</h1>
+{{ tabs([('sec-chat','Чат'),('sec-autotest','Автопроверка')] + ([('sec-results','Результат')] if results is not none else []), 'sec-results' if results is not none else 'sec-chat') }}
+<div class="card" id="sec-chat">
+  <p class="muted">Тестовые диалоги не считаются в лимит тарифа. Под ответом видно, откуда он взят.</p>
+  {% include "_chat.html" %}
+</div>
+
+<div class="card" id="sec-autotest">
+  <h3>Автопроверка</h3>
+  <p class="muted">Система сама задаст боту вопросы из вашей базы, вопросы про то, чего в базе нет, и попытки обмануть бота. Не больше 5 запусков в час.</p>
+  <form method="post" action="/app/test/autotest"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Запустить автопроверку</button></form>
+</div>
+
+{% if results is not none %}
+{% set ok = results | selectattr('passed') | list | length %}
+<div class="card" id="sec-results">
+  <h3>Результат: {{ ok }} из {{ results | length }}</h3>
+  {% if not results %}<p class="muted">В базе мало опубликованных фрагментов с заголовками — проверять нечего.</p>{% endif %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Группа</th><th>Вопрос</th><th>Ожидание</th><th>Что ответил бот</th><th></th></tr></thead>
+    <tbody>
+    {% for r in results %}
+    <tr><td>{{ r.group }}</td><td>{{ r.question }}</td><td>{{ r.expected }}</td><td>{{ r.answer or '— отказ —' }}</td>
+      <td><span class="pill {{ 'ok' if r.passed else 'err' }}">{{ 'ок' if r.passed else 'провал' }}</span></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+{% endblock %}

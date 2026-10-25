@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Шаблон: {{ tpl.title }}{% endblock %}
+{% block content %}
+<p><a href="/app/bot/templates">← Все шаблоны</a></p>
+<div class="row"><h1 class="grow">{{ tpl.title }}</h1><button type="submit" form="tpl-form">Создать ответы</button></div>
+{{ tabs([('sec-fields','Факты о бизнесе')] + ([('sec-services','Услуги')] if tpl.services else []) + [('sec-params','Параметры')]) }}
+<p class="muted">{{ tpl.summary }} Заполните то, что знаете: пустые поля пропускаются. Серым показан пример.</p>
+{% if error %}<div class="flash err" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/app/bot/templates/{{ tpl.key }}" class="card" id="tpl-form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div id="sec-fields">
+  <h2>Факты о бизнесе</h2>
+  {% for f in tpl.fields if f.key != 'schedule' %}
+  <label for="f_{{ f.key }}">{{ f.label }}</label>
+  {% if f.long %}<textarea id="f_{{ f.key }}" name="f_{{ f.key }}" maxlength="1500" placeholder="{{ f.hint }}">{{ values.get(f.key, '') }}</textarea>
+  {% else %}<input id="f_{{ f.key }}" name="f_{{ f.key }}" type="text" maxlength="1500" placeholder="{{ f.hint }}" value="{{ values.get(f.key, '') }}">{% endif %}
+  {% endfor %}
+  </div>
+
+  {% if tpl.services %}
+  <div id="sec-services">
+  <h2>Услуги для онлайн-записи</h2>
+  <p class="muted">Отметьте услуги, на которые бот будет записывать. Название, длительность и цену можно поменять.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Добавить</th><th>Название</th><th>Минут</th><th>Цена, ₽</th></tr></thead>
+    <tbody>
+    {% for s in tpl.services %}
+    <tr>
+      <td><input type="checkbox" name="svc_{{ loop.index0 }}_on" value="1" aria-label="Добавить услугу {{ s.name }}"></td>
+      <td><input type="text" name="svc_{{ loop.index0 }}_name" value="{{ s.name }}" maxlength="120" aria-label="Название"></td>
+      <td><input type="number" name="svc_{{ loop.index0 }}_dur" value="{{ s.duration_min }}" min="5" max="600" class="narrow-input" aria-label="Минут"></td>
+      <td><input type="number" name="svc_{{ loop.index0 }}_price" min="0" class="narrow-input" aria-label="Цена"></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% for f in tpl.fields if f.key == 'schedule' %}
+  <label for="f_schedule">{{ f.label }}</label>
+  <textarea id="f_schedule" name="f_schedule" maxlength="1500" placeholder="{{ f.hint }}">{{ values.get('schedule', '') }}</textarea>
+  <p class="muted">Если расписание указано и специалистов ещё нет, создадим специалиста «Основной» и привяжем к нему отмеченные услуги.</p>
+  {% endfor %}
+  </div>
+  {% endif %}
+
+  <div id="sec-params">
+  <h2>Параметры</h2>
+  <p><label class="check"><input type="checkbox" name="publish" value="1" checked> сразу опубликовать ответы (иначе они сохранятся черновиками)</label></p>
+  {% if tpl.greeting %}<p><label class="check"><input type="checkbox" name="greeting" value="1" checked> заменить приветствие бота на «{{ tpl.greeting }}»</label></p>{% endif %}
+  <p><button type="submit">Создать ответы</button></p>
+  </div>
+</form>
+{% endblock %}

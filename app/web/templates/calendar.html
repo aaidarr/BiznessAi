@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon %}
+{% block title %}Календарь{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/calendar.css">{% endblock %}
+{% block content %}
+{% macro url(v, d) -%}/app/calendar?view={{ v }}&amp;date={{ d.isoformat() }}{% if rid %}&amp;resource={{ rid }}{% endif %}{% if show_cancelled %}&amp;cancelled=1{% endif %}{%- endmacro %}
+{% macro st(s) -%}{{ {'confirmed': 'подтверждена', 'pending': 'ждёт подтверждения', 'cancelled': 'отменена'}.get(s, s) }}{%- endmacro %}
+{% macro ev_attrs(e) -%}
+data-booking data-href="/app/calendar/booking/{{ e.b.id }}" data-service="{{ e.service }}" data-resource="{{ e.resource }}" data-client="{{ e.b.client_name }}" data-phone="{{ e.b.client_phone }}" data-when="{{ e.start.strftime('%d.%m, %H:%M') }}–{{ e.end.strftime('%H:%M') }}" data-status="{{ e.b.status }}" data-price="{{ e.price if e.price is not none else '' }}" data-note="{{ e.b.note }}"
+{%- endmacro %}
+
+<div class="cal-page" data-cal data-csrf="{{ csrf }}" data-date="{{ day.isoformat() }}" data-resource="{{ rid or '' }}" data-slots-url="/app/calendar/slots">
+
+<div class="cal-bar">
+  <h1 class="sr">Календарь</h1>
+  <span class="cal-nav">
+    <a class="btn btn-secondary" href="{{ url(view, data.prev) }}" aria-label="Назад">‹</a>
+    <a class="btn btn-secondary" href="{{ url(view, today) }}">Сегодня</a>
+    <a class="btn btn-secondary" href="{{ url(view, data.next) }}" aria-label="Вперёд">›</a>
+  </span>
+  <span class="cal-title">{{ data.title }}</span>
+  <span class="grow"></span>
+  {% if pending %}<span class="pill pill-warn" title="Записей ждут подтверждения: {{ pending }}. Откройте запись и нажмите «Подтвердить»">Ждут: {{ pending }}</span>{% endif %}
+  <form class="cal-filter" method="get" action="/app/calendar" data-autosubmit>
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="hidden" name="date" value="{{ day.isoformat() }}">
+    <label class="sr" for="cf-r">Специалист</label>
+    <select id="cf-r" name="resource">
+      <option value="">Все специалисты</option>
+      {% for r in resources %}<option value="{{ r.id }}" {% if rid == r.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+    </select>
+    <label class="check"><input type="checkbox" name="cancelled" value="1" {% if show_cancelled %}checked{% endif %}> Отменённые</label>
+    <noscript><button type="submit" class="btn btn-secondary">Применить</button></noscript>
+  </form>
+  <span class="seg" role="group" aria-label="Вид">
+    <a href="{{ url('day', day) }}"{% if view == 'day' %} aria-current="true"{% endif %}>День</a>
+    <a href="{{ url('week', day) }}"{% if view == 'week' %} aria-current="true"{% endif %}>Неделя</a>
+    <a href="{{ url('month', day) }}"{% if view == 'month' %} aria-current="true"{% endif %}>Месяц</a>
+  </span>
+  <a class="icon-btn" href="/app/calendar/setup" title="Услуги и расписание" aria-label="Услуги и расписание">{{ icon('settings', 16) }}</a>
+  <button type="button" class="btn btn-primary" data-new-booking title="Новая запись (клавиша N)">{{ icon('plus', 16) }} Запись</button>
+</div>
+
+{% if not resources %}
+<div class="card empty">
+  <p><b>Календарь пока пуст — нет специалистов и расписания.</b></p>
+  <p class="muted">Добавьте услуги и время работы, и бот начнёт записывать клиентов на свободные окна. Быстрее всего — через <a href="/app/bot/templates">готовый шаблон</a> или <a href="/app/calendar/setup">вручную</a>.</p>
+</div>
+{% endif %}
+
+{% if view == 'week' %}
+<div class="calwrap">
+<div class="calgrid rows-{{ data.rows }}" role="table" aria-label="Записи на неделю. Нажмите на свободное время, чтобы записать клиента" data-rows="{{ data.rows }}" data-start-min="{{ data.start_min }}" data-step="{{ data.step }}">
+  <div class="calhead corner" role="columnheader"></div>
+  {% for d in data.days %}
+  <a class="calhead gc{{ loop.index + 1 }}{% if d.today %} today{% endif %}" href="{{ url('day', d.date) }}" role="columnheader">{{ d.wd }} {{ d.date.strftime('%d.%m') }}{% if d.n %} <span class="pill">{{ d.n }}</span>{% endif %}</a>
+  {% endfor %}
+  {% for t in data.times %}
+  <div class="tlabel tr{{ t.row }}">{{ t.label }}</div>
+  <div class="hline tr{{ t.row }}"></div>
+  {% endfor %}
+  {% for d in data.days %}<div class="dcol gc{{ loop.index + 1 }}{% if d.today %} today{% endif %}" data-date="{{ d.date.isoformat() }}"></div>{% endfor %}
+  {% for c in data.closed %}<div class="closed closed-{{ c.kind }} gc{{ c.col }} gr{{ c.row }} gs{{ c.span }}" aria-hidden="true">{% if c.kind == 'break' and c.span > 1 %}<span>перерыв</span>{% endif %}</div>{% endfor %}
+  {% for e in data.entries %}
+  <a class="ev st-{{ e.b.status }} gc{{ e.col }} gr{{ e.row }} gs{{ e.span }} lane-{{ e.lane }}-{{ e.lanes }}" href="/app/calendar/booking/{{ e.b.id }}" role="cell" {{ ev_attrs(e) }}
+     title="{{ e.start.strftime('%H:%M') }}–{{ e.end.strftime('%H:%M') }} · {{ e.service }} · {{ e.b.client_name }} · {{ e.b.client_phone }} · {{ e.resource }} · {{ st(e.b.status) }}">
+    <b>{{ e.start.strftime('%H:%M') }}</b> {{ e.b.client_name }}<br><span>{{ e.service }}{% if not rid %} · {{ e.resource }}{% endif %}</span>
+  </a>
+  {% endfor %}
+</div>
+</div>
+{% if util %}
+<p class="cal-load"><span>Загрузка недели:</span>
+  {% for u in util %}<span><b>{{ u.name }}</b> {% if u.pct is not none %}{{ u.pct }}% · {{ u.booked_h }} из {{ u.avail_h }} ч{% else %}расписание не задано{% endif %}</span>{% endfor %}
+</p>
+{% endif %}
+
+{% elif view == 'month' %}
+<div class="calmonth" role="table" aria-label="Записи за месяц">
+  {% for w in data.wd %}<div class="mhead" role="columnheader">{{ w }}</div>{% endfor %}
+  {% for week in data.weeks %}{% for c in week %}
+  <div class="mcell{% if not c.in_month %} out{% endif %}{% if c.today %} today{% endif %}" role="cell" data-date="{{ c.date.isoformat() }}">
+    <a class="mday" href="{{ url('day', c.date) }}">{{ c.date.day }}{% if c.n %} <span class="pill">{{ c.n }}</span>{% endif %}</a>
+    {% for e in c.entries %}<a class="mev st-{{ e.b.status }}" href="/app/calendar/booking/{{ e.b.id }}" {{ ev_attrs(e) }}>{{ e.start.strftime('%H:%M') }} {{ e.b.client_name }}</a>{% endfor %}
+    {% if c.more %}<a class="muted small-text" href="{{ url('day', c.date) }}">ещё {{ c.more }}</a>{% endif %}
+  </div>
+  {% endfor %}{% endfor %}
+</div>
+
+{% else %}
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Время</th><th>Услуга</th><th>Специалист</th><th>Клиент</th><th>Источник</th><th>Статус</th></tr></thead>
+  <tbody>
+  {% for e in data.entries %}
+  <tr>
+    <td><a href="/app/calendar/booking/{{ e.b.id }}" {{ ev_attrs(e) }}>{{ e.start.strftime('%H:%M') }}–{{ e.end.strftime('%H:%M') }}</a></td>
+    <td>{{ e.service }}{% if e.price is not none %} <span class="muted">{{ e.price }} ₽</span>{% endif %}</td>
+    <td>{{ e.resource }}</td>
+    <td>{{ e.b.client_name }}<br><span class="muted">{{ e.b.client_phone }}</span></td>
+    <td>{{ {'widget': 'Сайт', 'telegram': 'Telegram', 'vk': 'VK', 'owner': 'Вручную'}.get(e.b.channel, e.b.channel) }}</td>
+    <td><span class="pill {{ 'ok' if e.b.status == 'confirmed' else ('warn' if e.b.status == 'pending' else 'err') }}">{{ st(e.b.status) }}</span></td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="muted">На этот день записей нет. <button type="button" class="btn btn-secondary btn-sm" data-new-booking>Записать клиента</button></td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="muted">Всего записей: {{ data.total }}</p></div>
+{% endif %}
+
+<dialog id="new-booking" class="modal wide" aria-labelledby="nb-title">
+  <div class="modal-body">
+    <div class="modal-head"><h2 id="nb-title">Новая запись</h2><button type="button" class="icon-btn" data-close aria-label="Закрыть">{{ icon('x', 16) }}</button></div>
+    {% if services %}
+    <form method="post" action="/app/calendar/new" id="nb-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="grid2">
+        <div><label for="nb-service">Услуга</label>
+          <select id="nb-service" name="service_id" required>
+            {% for s in services %}<option value="{{ s.id }}" data-duration="{{ s.duration_min }}">{{ s.name }} · {{ s.duration_min }} мин{% if s.price_rub is not none %} · {{ s.price_rub }} ₽{% endif %}</option>{% endfor %}
+          </select></div>
+        <div><label for="nb-resource">Специалист</label>
+          <select id="nb-resource" name="resource_id"><option value="">Любой свободный</option>{% for r in resources %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="when-row">
+        <div><label for="nb-day">Дата</label><input id="nb-day" name="day" type="date" required></div>
+        <div><label for="nb-at">Время начала</label><input id="nb-at" name="at" type="time" step="300" required></div>
+      </div>
+      <div class="slots" id="nb-slots" aria-live="polite" aria-label="Свободное время"></div>
+      <p id="nb-hint" class="small-text muted" aria-live="polite"></p>
+      <div class="grid2 nb-client">
+        <div><label for="nb-name">Клиент</label><input id="nb-name" name="name" type="text" list="nb-clients" required maxlength="120" autocomplete="off" placeholder="Имя"></div>
+        <div><label for="nb-phone">Телефон</label><input id="nb-phone" name="phone" type="text" inputmode="tel" maxlength="40" placeholder="+7 900 123-45-67"></div>
+      </div>
+      <label for="nb-note" class="nb-note-l">Заметка</label>
+      <input id="nb-note" name="note" type="text" maxlength="1000" placeholder="Необязательно">
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close>Отмена</button>
+        <button type="submit" class="btn btn-primary">Записать</button>
+      </div>
+    </form>
+    <datalist id="nb-clients">{% for c in clients %}<option value="{{ c.name }}" data-phone="{{ c.phone }}"></option>{% endfor %}</datalist>
+    {% else %}
+    <p class="muted">Чтобы записывать клиентов, добавьте услугу, специалиста и его расписание.</p>
+    <div class="modal-actions"><a class="btn btn-primary" href="/app/calendar/setup">Настроить запись</a></div>
+    {% endif %}
+  </div>
+</dialog>
+
+<dialog id="booking-quick" class="modal wide" aria-labelledby="bq-title">
+  <div class="modal-body">
+    <div class="modal-head"><h2 id="bq-title">Запись</h2><span id="bq-status" class="pill"></span><button type="button" class="icon-btn" data-close aria-label="Закрыть">{{ icon('x', 16) }}</button></div>
+    <dl class="quick-facts" id="bq-body"></dl>
+    <div class="quick-actions" id="bq-actions"></div>
+  </div>
+</dialog>
+
+</div>
+{% endblock %}

@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest
+pytest-cov
+ruff
+mypy
+bandit
+pip-audit
+types-beautifulsoup4

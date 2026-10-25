@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Исправить ответ{% endblock %}
+{% block content %}
+<p><a href="/app/conversations">← Диалоги</a></p>
+<h1>Исправить ответ бота</h1>
+<div class="card">
+  <p class="muted">Что ответил бот:</p>
+  <blockquote>{{ msg.text }}</blockquote>
+  <p class="muted">Итог: {{ {'answered': 'ответ из базы', 'blocked': 'ответ модели заблокирован', 'refused': 'в базе ответа нет'}.get(msg.outcome, msg.outcome) }}</p>
+</div>
+<form method="post" action="/app/bot/fix/{{ msg.id }}" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="q">Вопрос клиента</label>
+  <input id="q" name="question" type="text" required maxlength="200" value="{{ question }}">
+  <label for="a">Как нужно отвечать</label>
+  <textarea id="a" name="answer" required maxlength="4000">{{ prefill }}</textarea>
+  <p class="muted">Ответ сразу опубликуется и будет главнее текста с сайта на такой же вопрос.</p>
+  <button type="submit">Сохранить исправление</button>
+</form>
+{% endblock %}

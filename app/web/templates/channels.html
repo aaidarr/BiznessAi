@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Каналы{% endblock %}
+{% block content %}
+<h1>Каналы</h1>
+{{ tabs([('sec-publish','Публикация'),('sec-widget','Виджет'),('sec-telegram','Telegram'),('sec-vk','VK')], 'sec-publish') }}
+
+<div class="card" id="sec-publish">
+  <div class="row">
+    <h3 class="grow">Публикация</h3>
+    <span class="pill {{ 'ok' if biz.channels_enabled else 'warn' }}">{{ 'включены' if biz.channels_enabled else 'выключены' }}</span>
+  </div>
+  <p class="muted">Пока каналы выключены, клиенты не могут писать боту. Тестовый чат работает всегда.</p>
+  {% if biz.site_url %}
+  <h3>Подтверждение сайта {{ biz.site_url }}
+    <span class="pill {{ 'ok' if biz.site_verified else 'warn' }}">{{ 'подтверждён' if biz.site_verified else 'не подтверждён' }}</span></h3>
+  {% if not biz.site_verified %}
+  <p class="muted">Нужно, чтобы никто не мог запустить бота от имени чужой компании. Выберите один способ:</p>
+  <p>1. Вставьте в &lt;head&gt; главной страницы:</p><pre>{{ verify.meta }}</pre>
+  <p>2. Или создайте на сайте файл <code>/{{ verify.file }}</code> с текстом:</p><pre>{{ biz.verify_token }}</pre>
+  <form method="post" action="/app/channels/verify-site"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Проверить</button></form>
+  {% endif %}
+  {% endif %}
+  <form method="post" action="/app/channels/toggle" class="mt10">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" {% if not can_go_live and not biz.channels_enabled %}disabled{% endif %}>{{ 'Выключить каналы' if biz.channels_enabled else 'Включить каналы' }}</button>
+  </form>
+</div>
+
+<div class="card" id="sec-widget">
+  <h3>Виджет на сайте</h3>
+  <p class="muted">Вставьте перед закрывающим &lt;/body&gt;:</p>
+  <pre>{{ snippet }}</pre>
+  <p class="muted">Виджет работает только на вашем сайте (и на адресах из <a href="/app/settings">настроек</a>).</p>
+</div>
+
+<div class="card" id="sec-telegram">
+  <div class="row"><h3 class="grow">Telegram</h3><span class="pill {{ 'ok' if tg_connected else 'warn' }}">{{ 'подключён' if tg_connected else 'не подключён' }}</span></div>
+  {% if tg_connected %}
+  <p>Бот: @{{ biz.tg_username }}</p>
+  <p class="muted">Чтобы получать заявки и записи, отправьте вашему боту сообщение:</p>
+  <pre>/owner {{ biz.tg_link_code }}</pre>
+  <p class="muted">Уведомления: {{ 'включены' if biz.tg_owner_chat_id else 'ещё не привязаны' }}.</p>
+  <form method="post" action="/app/channels/telegram/disconnect" data-confirm="Отключить Telegram?"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="danger small">Отключить</button></form>
+  {% else %}
+  {% if not https %}<div class="flash err">Для Telegram нужен публичный HTTPS-адрес сервиса. Сейчас он не настроен.</div>{% endif %}
+  <p class="muted">1. Напишите @BotFather → /newbot. 2. Вставьте полученный токен (он хранится зашифрованным).</p>
+  <form method="post" action="/app/channels/telegram">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="tgt">Токен бота</label>
+    <input id="tgt" name="token" type="password" autocomplete="off" required>
+    <p><button type="submit">Подключить</button></p>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card" id="sec-vk">
+  <div class="row"><h3 class="grow">VK</h3><span class="pill {{ 'ok' if vk_connected else 'warn' }}">{{ 'сохранён' if vk_connected else 'не подключён' }}</span></div>
+  <p class="muted">В сообществе: Управление → Работа с API → Callback API. Адрес и секретный ключ — ниже. Включите событие «Входящее сообщение».</p>
+  <p>Адрес: <code>{{ base }}/hook/vk/{{ biz.public_key }}</code></p>
+  <p>Секретный ключ: <code>{{ biz.vk_secret or '— появится после сохранения —' }}</code></p>
+  {% if vk_connected %}
+  <p class="muted">Сообщество: {{ biz.vk_group_id }}</p>
+  <form method="post" action="/app/channels/vk/disconnect" data-confirm="Отключить VK?"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="danger small">Отключить</button></form>
+  {% else %}
+  <form method="post" action="/app/channels/vk">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="vg">ID сообщества (цифры)</label><input id="vg" name="group_id" type="text" required>
+    <label for="vt">Ключ доступа сообщества (с правом «сообщения»)</label><input id="vt" name="token" type="password" autocomplete="off" required>
+    <label for="vc">Строка, которую вернуть для подтверждения</label><input id="vc" name="confirmation" type="text" required>
+    <p><button type="submit">Сохранить</button></p>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

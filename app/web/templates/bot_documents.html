@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Документы{% endblock %}
+{% block content %}
+<h1>Документы и источники</h1>
+{{ tabs([('sec-sources','Источники'),('sec-add','Добавить источник')], 'sec-sources' if rows else 'sec-add') }}
+<p class="muted">Из каждого источника получаются фрагменты-черновики. Проверьте их и опубликуйте — бот узнает только то, что вы разрешили. Удаление документа убирает и все его фрагменты.</p>
+
+<div class="grid2" id="sec-add">
+  <div class="card">
+    <h3>Загрузить файл</h3>
+    <p class="muted">Прайс, правила, договор, меню: .txt, .md или .pdf до 2 МБ. Сканы без текста не читаются.</p>
+    <form method="post" action="/app/bot/documents/upload" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label for="f">Файл</label>
+      <input id="f" name="file" type="file" accept=".txt,.md,.pdf" required>
+      <p><button type="submit">Загрузить</button></p>
+    </form>
+  </div>
+  <div class="card">
+    <h3>Собрать с сайта</h3>
+    {% if biz.site_url %}
+    <p class="muted">Сайт: {{ biz.site_url }}. До 25 страниц, соблюдаем robots.txt.</p>
+    <form method="post" action="/app/bot/documents/import-site"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Загрузить сайт</button></form>
+    {% if job %}<p class="muted">Последняя загрузка: <span class="pill {{ 'ok' if job.status == 'done' else ('err' if job.status == 'failed' else 'warn') }}">{{ job.status }}</span> {{ job.result }}</p>{% endif %}
+    {% else %}
+    <p class="muted">Адрес сайта не указан. <a href="/app/settings">Добавить в настройках</a></p>
+    {% endif %}
+  </div>
+</div>
+
+<div id="sec-sources">
+<h2>Источники ({{ rows | length }})</h2>
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Название</th><th>Тип</th><th>Фрагментов</th><th>Опубликовано</th><th>Объём</th><th>Добавлен</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td><a href="/app/bot/answers?doc={{ r.doc.id }}">{{ r.doc.name }}</a></td>
+    <td>{{ {'file': 'Файл', 'site': 'Сайт', 'template': 'Шаблон'}.get(r.doc.kind, r.doc.kind) }}</td>
+    <td>{{ r.total }}</td>
+    <td><span class="pill {{ 'ok' if r.published == r.total and r.total else 'warn' }}">{{ r.published }} из {{ r.total }}</span></td>
+    <td>{{ (r.chars / 1000) | round(1) }} тыс. зн.</td>
+    <td>{{ r.doc.created_at.strftime('%d.%m.%Y') }}</td>
+    <td class="row">
+      {% if r.published < r.total %}<form method="post" action="/app/bot/documents/{{ r.doc.id }}/publish"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="small" type="submit">Опубликовать всё</button></form>{% endif %}
+      <form method="post" action="/app/bot/documents/{{ r.doc.id }}/delete" data-confirm="Удалить документ и все его фрагменты?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger small" type="submit">Удалить</button></form>
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">Источников пока нет.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+</div>
+{% endblock %}

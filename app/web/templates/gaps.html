@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Вопросы без ответа{% endblock %}
+{% block content %}
+<h1>Вопросы без ответа</h1>
+<p class="muted">О чём спрашивали клиенты, а в базе ответа не было. Напишите ответ — он сразу попадёт в базу и опубликуется.</p>
+{% for g in gaps %}
+<div class="card">
+  <div class="row"><b class="grow">{{ g.sample }}</b><span class="pill warn">спрашивали {{ g.count }} раз</span></div>
+  <form method="post" action="/app/gaps/{{ g.id }}/answer">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="a{{ g.id }}">Ответ для клиентов</label>
+    <textarea id="a{{ g.id }}" name="answer" required maxlength="4000"></textarea>
+    <div class="row mt8"><button type="submit">Добавить в базу</button></div>
+  </form>
+  <form method="post" action="/app/gaps/{{ g.id }}/dismiss" class="mt6"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="ghost small">Не нужно отвечать</button></form>
+</div>
+{% else %}<p class="muted">Пока все вопросы клиентов закрыты базой.</p>{% endfor %}
+{% endblock %}

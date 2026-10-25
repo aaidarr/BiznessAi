@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>{{ title }}</h1>
+  <p class="muted">Код ошибки: {{ code }}</p>
+  <p><a class="btn" href="/">На главную</a></p>
+</div>
+{% endblock %}

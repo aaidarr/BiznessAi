@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Готовые шаблоны{% endblock %}
+{% block content %}
+<h1>Готовые шаблоны</h1>
+<p class="muted">Выберите свою сферу, впишите факты о бизнесе — получите готовые ответы на типовые вопросы клиентов. Что вы не заполните, того бот не придумает: он честно передаст вопрос менеджеру.</p>
+<div class="grid">
+{% for t in templates %}
+  <article class="card tpl">
+    <h3>{{ t.title }}</h3>
+    <p class="muted">{{ t.summary }}</p>
+    <p class="muted small-text">Ответов в шаблоне: {{ t.items | length }}{% if t.services %} · услуг для записи: {{ t.services | length }}{% endif %}</p>
+    <p class="row">
+      <a class="btn" href="/app/bot/templates/{{ t.key }}">{{ 'Заполнить заново' if t.key in applied else 'Использовать' }}</a>
+      {% if t.key in applied %}<span class="pill ok">применён</span>{% endif %}
+    </p>
+  </article>
+{% endfor %}
+</div>
+{% endblock %}

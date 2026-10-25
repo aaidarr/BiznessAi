@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Диалоги{% endblock %}
+{% block content %}
+<h1>Диалоги</h1>
+<p class="muted">Последние 50 диалогов клиентов. Тестовый чат не показывается. Переписка хранится {{ retention }} дней. Бот ответил не так? Нажмите «Исправить» — он запомнит правильный ответ.</p>
+{% for c in convs %}
+<details class="card">
+  <summary>{{ c.last_at.strftime('%d.%m %H:%M') }} · {{ {'widget': 'Сайт', 'telegram': 'Telegram', 'vk': 'VK'}.get(c.channel, c.channel) }}{% if c.handed_off %} · <span class="pill warn">передан менеджеру</span>{% endif %}{% if c.after_hours %} · вне рабочего времени{% endif %}</summary>
+  {% for m in msgs.get(c.id, []) %}
+  <p><b>{{ 'Клиент' if m.role == 'client' else 'Бот' }}:</b> {{ m.text }}
+    {% if m.outcome %} <span class="pill">{{ m.outcome }}</span>{% endif %}
+    {% if m.role == 'bot' and m.outcome in ('answered', 'blocked', 'refused') %} <a class="small-text" href="/app/bot/fix/{{ m.id }}">Исправить</a>{% endif %}
+  </p>
+  {% endfor %}
+</details>
+{% else %}<p class="muted">Диалогов пока нет.</p>{% endfor %}
+{% endblock %}

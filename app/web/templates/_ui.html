@@ -1,0 +1,52 @@
+{# Shared UI macros: one icon set (24px, 1.75 stroke), page header, empty state, status pill. #}
+{% macro icon(name, size=18) -%}
+<svg class="ico" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- if name == 'home' %}<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>
+{%- elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>
+{%- elif name == 'chat' %}<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/>
+{%- elif name == 'bot' %}<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 14h.01M15 14h.01M2 14h2M20 14h2"/>
+{%- elif name == 'chart' %}<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+{%- elif name == 'settings' %}<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>
+{%- elif name == 'shield' %}<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>
+{%- elif name == 'chevron' %}<path d="M6 9l6 6 6-6"/>
+{%- elif name == 'menu' %}<path d="M4 6h16M4 12h16M4 18h16"/>
+{%- elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif name == 'x' %}<path d="M6 6l12 12M18 6L6 18"/>
+{%- elif name == 'alert' %}<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>
+{%- elif name == 'info' %}<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>
+{%- elif name == 'phone' %}<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>
+{%- elif name == 'question' %}<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>
+{%- elif name == 'logout' %}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+{%- elif name == 'arrow' %}<path d="M5 12h14M13 6l6 6-6 6"/>
+{%- elif name == 'check' %}<path d="M5 12l5 5 9-10"/>
+{%- elif name == 'file' %}<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>
+{%- elif name == 'spark' %}<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro page_header(title, subtitle='', back='') -%}
+<div class="page-head">
+  <div class="page-head-main">
+    {% if back %}<a class="icon-btn" href="{{ back }}" aria-label="Назад">{{ icon('chevron', 18) }}</a>{% endif %}
+    <div>
+      <h1>{{ title }}</h1>
+      {% if subtitle %}<p class="muted page-sub">{{ subtitle }}</p>{% endif %}
+    </div>
+  </div>
+  <div class="page-actions">{{ caller() if caller else '' }}</div>
+</div>
+{%- endmacro %}
+
+{# Page tabs: every tab shows ONE section of the page and hides the others (cabinet.js).
+   Without JavaScript all sections stay visible and the tabs are ordinary anchor links.
+   `items` = [(section_id, label)], `default` = the section shown first. #}
+{% macro tabs(items, default='') -%}
+<div class="tabs" data-tabs data-default="{{ default }}">
+  <div class="tabs-list" role="tablist" aria-label="Разделы страницы">{% for id, label in items %}<a href="#{{ id }}" id="tab-{{ id }}" aria-controls="{{ id }}">{{ label }}</a>{% endfor %}</div>
+</div>
+{%- endmacro %}
+
+{% macro empty(title, text='') -%}
+<div class="empty-state"><p class="empty-title">{{ title }}</p>{% if text %}<p class="muted">{{ text }}</p>{% endif %}{{ caller() if caller else '' }}</div>
+{%- endmacro %}

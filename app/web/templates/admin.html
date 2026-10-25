@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Администрирование{% endblock %}
+{% block content %}
+<h1>Бизнесы</h1>
+{{ tabs([('sec-businesses','Бизнесы'),('sec-audit','Журнал аудита')]) }}
+<div class="card" id="sec-businesses"><div class="table-wrap"><table>
+  <thead><tr><th>#</th><th>Название</th><th>Владелец</th><th>Тариф</th><th>Диалогов (мес.)</th><th>Токенов</th><th>Статус</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.b.id }}</td><td>{{ r.b.name }}</td><td>{{ r.email }}</td><td>{{ r.plan }}</td><td>{{ r.dialogs }}</td><td>{{ r.tokens }}</td>
+    <td><span class="pill {{ 'err' if r.b.blocked else 'ok' }}">{{ 'заблокирован' if r.b.blocked else 'активен' }}</span></td>
+    <td class="row">
+      <form method="post" action="/admin/business/{{ r.b.id }}/block" data-confirm="Изменить статус?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="small ghost" type="submit">{{ 'Разблокировать' if r.b.blocked else 'Заблокировать' }}</button></form>
+      <form method="post" action="/admin/business/{{ r.b.id }}/plan" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <select name="plan" aria-label="Тариф"><option value="free">free</option><option value="start">start</option></select>
+        <input name="days" type="number" value="30" min="1" max="366" class="narrow-input" aria-label="Дней">
+        <button class="small" type="submit">Тариф</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+<div id="sec-audit">
+<h2>Журнал аудита</h2>
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Время</th><th>Действие</th><th>Бизнес</th><th>Пользователь</th><th>IP</th><th>Детали</th></tr></thead>
+  <tbody>
+  {% for a in log %}<tr><td>{{ a.created_at.strftime('%d.%m %H:%M:%S') }}</td><td>{{ a.action }}</td><td>{{ a.business_id or '' }}</td><td>{{ a.user_id or '' }}</td><td>{{ a.ip }}</td><td>{{ a.detail }}</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+</div>
+{% endblock %}

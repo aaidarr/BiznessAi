@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Заявки{% endblock %}
+{% block content %}
+<h1>Заявки</h1>
+<p class="muted">Клиенты, которым бот не смог ответить или которые попросили менеджера.</p>
+<div class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Когда</th><th>Имя</th><th>Телефон</th><th>О чём</th><th></th></tr></thead>
+  <tbody>
+  {% for l in leads %}
+  <tr>
+    <td>{{ l.created_at.strftime('%d.%m %H:%M') }}</td><td>{{ l.name or '—' }}</td><td>{{ l.phone }}</td><td>{{ l.comment }}</td>
+    <td>{% if l.status == 'new' %}<form method="post" action="/app/leads/{{ l.id }}/done"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="small" type="submit">Обработана</button></form>{% else %}<span class="pill ok">готово</span>{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="muted">Заявок пока нет.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

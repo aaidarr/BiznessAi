@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Характер бота{% endblock %}
+{% block content %}
+<h1>Характер бота</h1>
+<p class="muted">Как бот здоровается, что говорит, когда не знает ответа, и каким тоном общается.</p>
+<form method="post" action="/app/bot/personality" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="g">Приветствие</label>
+  <textarea id="g" name="greeting" required maxlength="500">{{ biz.greeting }}</textarea>
+  <label for="h">Ответ, когда в базе нет ответа</label>
+  <textarea id="h" name="handoff_text" required maxlength="500">{{ biz.handoff_text }}</textarea>
+  <p class="muted">После этого текста бот предложит клиенту оставить телефон — заявка попадёт в раздел «Заявки».</p>
+  <label for="tone">Тон общения</label>
+  <select id="tone" name="tone">
+    {% for k, v in tones.items() %}<option value="{{ k }}" {% if biz.tone == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+  </select>
+  <p class="muted">Тон влияет на ответы, которые перефразирует языковая модель. Дословные выдержки из базы он не меняет.</p>
+  <p><button type="submit">Сохранить</button></p>
+</form>
+{% endblock %}

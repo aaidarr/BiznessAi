@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Тариф{% endblock %}
+{% block content %}
+<h1>Тариф</h1>
+<div class="card">
+  <p>Текущий тариф: <b>{{ plan.title }}</b>{% if biz.plan_until %} (до {{ biz.plan_until.strftime('%d.%m.%Y') }}){% endif %}</p>
+  <p>Диалогов в этом месяце: <b>{{ used }}</b> из {{ plan.dialogs }}. При превышении бот перестаёт отвечать и просит клиента связаться напрямую.</p>
+</div>
+<div class="grid">
+{% for key, p in plans.items() %}
+  <div class="card">
+    <h3>{{ p.title }}</h3>
+    <p><b>{{ p.price_rub }} ₽</b> в месяц · {{ p.dialogs }} диалогов</p>
+    {% if p.price_rub > 0 %}
+      {% if enabled %}
+      <form method="post" action="/app/billing/checkout"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="plan" value="{{ key }}"><button type="submit">Оплатить</button></form>
+      {% else %}<p class="muted">Онлайн-оплата не подключена. Напишите оператору сервиса — тариф включат вручную.</p>{% endif %}
+    {% endif %}
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

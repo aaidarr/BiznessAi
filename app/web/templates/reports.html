@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Отчёты{% endblock %}
+{% block content %}
+{% macro delta(d, unit='%') -%}
+{%- if d is not none %}<span class="delta {{ 'up' if d > 0 else ('down' if d < 0 else '') }}">{{ '▲' if d > 0 else ('▼' if d < 0 else '•') }} {{ '+' if d > 0 }}{{ d }}{{ unit }}</span> <span class="muted small-text">к прошлому периоду</span>{% endif -%}
+{%- endmacro %}
+{% macro kpi(title, value, d=none, suffix='', unit='%', hint='') -%}
+<div class="card stat">
+  <span class="muted">{{ title }}</span>
+  <b>{% if value is none %}—{% else %}{{ value }}{{ suffix }}{% endif %}</b>
+  {{ delta(d, unit) }}
+  {% if hint %}<span class="muted small-text">{{ hint }}</span>{% endif %}
+</div>
+{%- endmacro %}
+{% macro chart(c, caption, step=1) -%}
+<svg viewBox="0 0 {{ c.width }} {{ c.height + 18 }}" class="chart" role="img" aria-label="{{ caption }}">
+  <line class="base" x1="0" x2="{{ c.width }}" y1="{{ c.height }}" y2="{{ c.height }}"></line>
+  {% for b in c.bars %}
+  <rect class="bar" x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}"><title>{{ b.label }}: {{ b.value }}</title></rect>
+  {% if loop.index0 % step == 0 %}<text class="axis" x="{{ b.x }}" y="{{ c.height + 13 }}">{{ b.label }}</text>{% endif %}
+  {% endfor %}
+  <text class="axis" x="2" y="10">макс. {{ c.max }}</text>
+</svg>
+{%- endmacro %}
+
+<div class="row">
+  <h1 class="grow">Отчёты</h1>
+  <span class="seg" role="group" aria-label="Период">
+    {% for p in periods %}<a href="/app/reports?days={{ p }}"{% if p == days %} aria-current="true"{% endif %}>{{ p }} дн.</a>{% endfor %}
+  </span>
+</div>
+<p class="muted">{{ r.since.strftime('%d.%m.%Y') }} — {{ r.until.strftime('%d.%m.%Y') }}. Тестовые диалоги из кабинета не учитываются.</p>
+{{ tabs([('sec-overview','Обзор'),('sec-channels','Каналы и ответы'),('sec-svc','Услуги и время'),('sec-topics','Темы и пробелы'),('sec-plan','Тариф и выгрузка')]) }}
+<div id="sec-overview">
+
+<div class="grid">
+  {{ kpi('Диалогов', r.kpi.dialogs.value, r.kpi.dialogs.delta) }}
+  {{ kpi('Записей', r.kpi.bookings.value, r.kpi.bookings.delta, hint='без отменённых') }}
+  {{ kpi('Заявок', r.kpi.leads.value, r.kpi.leads.delta) }}
+  {{ kpi('Ответов из базы', r.kpi.answer_rate.value, r.kpi.answer_rate.delta, '%', ' п.п.', 'доля вопросов, на которые нашёлся ответ') }}
+  {{ kpi('Без менеджера', r.kpi.automation.value, none, '%', hint='диалоги, где бот справился сам') }}
+  {{ kpi('Записано на сумму', r.kpi.revenue.value, r.kpi.revenue.delta, ' ₽', hint='по ценам услуг, не оплаты') }}
+</div>
+
+<div class="card">
+  <h3>Пока вы были заняты или не на связи</h3>
+  {% if r.after_hours.dialogs %}
+  <p>Вне рабочего времени бот провёл <b>{{ r.after_hours.dialogs }}</b> диалогов{% if r.after_hours.bookings %}, из них <b>{{ r.after_hours.bookings }}</b> закончились записью{% if r.after_hours.revenue %} на <b>{{ r.after_hours.revenue }} ₽</b>{% endif %}{% endif %}.</p>
+  {% else %}<p class="muted">Диалогов вне рабочего времени не было. Рабочее время берётся из расписания специалистов.</p>{% endif %}
+  {% if r.peak_hour is not none %}<p class="muted">Чаще всего пишут около {{ '%02d' % r.peak_hour }}:00, самый активный день — {{ r.peak_weekday }}.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h3>Диалоги по дням</h3>
+  {{ chart(r.chart_dialogs, 'Число диалогов по дням', (r.days // 10) or 1) }}
+</div>
+<div class="card">
+  <h3>Записи по дням</h3>
+  {{ chart(r.chart_bookings, 'Число записей по дням', (r.days // 10) or 1) }}
+</div>
+
+</div>
+
+<div class="grid2" id="sec-channels">
+  <div class="card">
+    <h3>Каналы</h3>
+    <table><tbody>
+    {% for c in r.channels %}<tr><td>{{ c.name }}</td><td><progress max="{{ r.kpi.dialogs.value or 1 }}" value="{{ c.count }}" aria-label="{{ c.name }}"></progress></td><td>{{ c.count }}</td></tr>
+    {% else %}<tr><td class="muted">Диалогов ещё не было.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h3>Что отвечал бот</h3>
+    <table><tbody>
+      <tr><td>Ответ из базы</td><td>{{ r.outcomes.answered }}</td></tr>
+      <tr><td>Ответ модели заблокирован, дана выдержка</td><td>{{ r.outcomes.blocked }}</td></tr>
+      <tr><td>В базе ответа нет</td><td>{{ r.outcomes.refused }}</td></tr>
+      <tr><td>Передано менеджеру</td><td>{{ r.outcomes.handoff }}</td></tr>
+      <tr><td>Запись и отмена</td><td>{{ r.outcomes.booking }}</td></tr>
+      <tr><td>Не отвечал: лимит тарифа</td><td>{{ r.outcomes.limit }}</td></tr>
+    </tbody></table>
+    {% if r.outcomes.limit %}<p class="flash err">Из-за лимита тарифа бот пропустил часть клиентов. <a href="/app/billing">Тариф</a></p>{% endif %}
+  </div>
+</div>
+
+<div id="sec-svc">
+<div class="card">
+  <h3>Записи по услугам</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Услуга</th><th>Записей</th><th>Сумма, ₽</th></tr></thead>
+    <tbody>
+    {% for s in r.by_service %}<tr><td>{{ s.name }}</td><td>{{ s.count }}</td><td>{{ s.sum }}</td></tr>
+    {% else %}<tr><td colspan="3" class="muted">Записей за период нет.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if r.cancelled or r.pending %}<p class="muted">Отменено: {{ r.cancelled }} · Ждут подтверждения: {{ r.pending }}</p>{% endif %}
+</div>
+
+<div class="grid2">
+  <div class="card"><h3>Обращения по часам</h3>{{ chart(r.chart_hours, 'Обращения по часам суток', 2) }}</div>
+  <div class="card"><h3>По дням недели</h3>{{ chart(r.chart_wdays, 'Обращения по дням недели') }}</div>
+</div>
+
+</div>
+
+<div id="sec-topics">
+<div class="grid2">
+  <div class="card">
+    <h3>О чём спрашивают чаще всего</h3>
+    <ol class="plain">{% for t in r.top_topics %}<li>{{ t.text }} <span class="pill">{{ t.count }}</span></li>{% else %}<li class="muted">Пока мало данных.</li>{% endfor %}</ol>
+  </div>
+  <div class="card">
+    <h3>Какие ответы помогают</h3>
+    <ol class="plain">{% for f in r.top_fragments %}<li>{{ f.title }} <span class="pill ok">{{ f.count }}</span></li>{% else %}<li class="muted">Пока мало данных.</li>{% endfor %}</ol>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Чего не хватает в базе</h3>
+  {% if r.open_gaps %}
+  <ul class="plain">{% for g in r.open_gaps %}<li>{{ g.sample }} <span class="pill warn">спрашивали {{ g.count }} раз</span></li>{% endfor %}</ul>
+  <a href="/app/gaps">Ответить на эти вопросы →</a>
+  {% else %}<p class="muted">Все вопросы клиентов закрыты базой.</p>{% endif %}
+</div>
+
+</div>
+
+<div id="sec-plan">
+<div class="card">
+  <h3>Тариф «{{ r.plan }}»</h3>
+  <p><progress max="{{ r.plan_limit }}" value="{{ [r.month_dialogs, r.plan_limit] | min }}" aria-label="Использование тарифа"></progress> {{ r.month_dialogs }} из {{ r.plan_limit }} диалогов в этом месяце</p>
+</div>
+
+<div class="card">
+  <h3>Выгрузка в таблицу (CSV)</h3>
+  <p class="muted">За выбранный период, открывается в Excel.</p>
+  <p class="row">
+    <a class="btn ghost small" href="/app/reports/export/leads.csv?days={{ days }}">Заявки</a>
+    <a class="btn ghost small" href="/app/reports/export/bookings.csv?days={{ days }}">Записи</a>
+    <a class="btn ghost small" href="/app/reports/export/dialogs.csv?days={{ days }}">Диалоги</a>
+  </p>
+</div>
+</div>
+{% endblock %}

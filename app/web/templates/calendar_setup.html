@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_ui.html" import tabs %}
+{% block title %}Календарь{% endblock %}
+{% block content %}
+<p><a href="/app/calendar">← Календарь</a></p>
+<h1>Настройка записи</h1>
+{{ tabs([('sec-services','Услуги'),('sec-resources','Специалисты')]) }}
+<p class="muted">Бот предлагает только свободное время из этого расписания. Часовой пояс: {{ biz.timezone }} (меняется в <a href="/app/settings">настройках</a>).</p>
+
+<div class="card" id="sec-services">
+  <h3>1. Услуги</h3>
+  <ul>
+  {% for s in services %}
+    <li>{{ s.name }} — {{ s.duration_min }} мин{% if s.price_rub is not none %}, {{ s.price_rub }} ₽{% endif %}{% if not s.active %} <span class="pill warn">скрыта</span>{% endif %}
+      <form method="post" action="/app/calendar/service/{{ s.id }}/delete" class="inline" data-confirm="Удалить услугу?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger small" type="submit">Удалить</button></form></li>
+  {% else %}<li class="muted">Услуг пока нет.</li>{% endfor %}
+  </ul>
+  <form method="post" action="/app/calendar/service" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grow"><label for="sn">Название</label><input id="sn" name="name" type="text" required maxlength="120"></div>
+    <div><label for="sd">Минут</label><input id="sd" name="duration" type="number" min="5" max="600" value="60"></div>
+    <div><label for="sp">Цена, ₽</label><input id="sp" name="price" type="number" min="0"></div>
+    <button type="submit">Добавить</button>
+  </form>
+</div>
+
+<div class="card" id="sec-resources">
+  <h3>2. Специалисты, кабинеты или места</h3>
+  <form method="post" action="/app/calendar/resource" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="grow"><label for="rn">Имя / название</label><input id="rn" name="name" type="text" required maxlength="120"></div>
+    <button type="submit">Добавить</button>
+  </form>
+  {% for item in resources %}
+  <div class="card" id="res-{{ item.r.id }}">
+    <div class="row"><h3 class="grow">{{ item.r.name }}{% if not item.r.active %} <span class="pill warn">скрыт</span>{% endif %}</h3>
+      <form method="post" action="/app/calendar/resource/{{ item.r.id }}/delete" data-confirm="Удалить?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="danger small" type="submit">Удалить</button></form></div>
+    <form method="post" action="/app/calendar/resource/{{ item.r.id }}/schedule">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label for="sc{{ item.r.id }}">Расписание (по строке на группу дней)</label>
+      <textarea id="sc{{ item.r.id }}" name="schedule" placeholder="Пн-Пт 10:00-13:00, 14:00-19:00&#10;Сб 10:00-15:00">{{ item.schedule }}</textarea>
+      <p class="muted">Выходные дни не указывайте. Перерыв — два интервала через запятую.</p>
+      <fieldset class="plain"><legend class="muted">Какие услуги оказывает</legend>
+      {% for s in services %}<label class="check"><input type="checkbox" name="service_ids" value="{{ s.id }}" {% if s.id in item.linked %}checked{% endif %}> {{ s.name }}</label>{% endfor %}
+      </fieldset>
+      <p><button type="submit">Сохранить расписание</button></p>
+    </form>
+    <form method="post" action="/app/calendar/resource/{{ item.r.id }}/timeoff" class="row">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div><label for="df{{ item.r.id }}">Выходной с</label><input id="df{{ item.r.id }}" name="date_from" type="date" required></div>
+      <div><label for="dt{{ item.r.id }}">по</label><input id="dt{{ item.r.id }}" name="date_to" type="date" required></div>
+      <div class="grow"><label for="dn{{ item.r.id }}">Заметка</label><input id="dn{{ item.r.id }}" name="note" type="text" maxlength="200"></div>
+      <button type="submit" class="ghost">Добавить</button>
+    </form>
+    {% for o in item.offs %}
+    <p class="muted">Выходной: {{ o.from.strftime('%d.%m.%Y') }} — {{ o.to.strftime('%d.%m.%Y') }} {{ o.o.note }}
+      <form method="post" action="/app/calendar/timeoff/{{ o.o.id }}/delete" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost small" type="submit">Убрать</button></form></p>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}
